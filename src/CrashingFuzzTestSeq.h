@@ -1,10 +1,9 @@
-#include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <array>
 #include <span>
 #include <numeric> // iota
-#include <sstream>
 #include <iomanip>
 
 #include <unistd.h>
@@ -52,21 +51,23 @@ public:
 
     std::vector<size_t> getMinimalTestCasesForCrash() const
     {
-        std::vector<size_t> testCasesReqForCrash;
-        std::vector<size_t> testCases(getNumberOfTestCases());
+        std::vector<size_t> testCasesReqForCrash; // indices of test cases must be executed first for the crash
+        std::vector<size_t> testCases(getNumberOfTestCases()); // index list 0..n-1 to copy from
         std::iota(begin(testCases), end(testCases), 0);
 
         auto itTestCasesStart = begin(testCases);
 
         while (itTestCasesStart < end(testCases))
         {
-            size_t midPoint = distance(itTestCasesStart, end(testCases)) / 2;
+            // + 1 below -> round the midpoint "up"
+            size_t midPoint = (distance(itTestCasesStart, end(testCases)) + 1) / 2;
 
+            // find the longest test case sequence [itTestCasesStart, ...] that does not contribute to the crash
             while (midPoint >= 1)
             {
                 auto itAppendBegin = itTestCasesStart + midPoint;
                 std::vector<size_t> newTestCases = createVector(testCasesReqForCrash, itAppendBegin, end(testCases));
-                if (testTestCases(newTestCases))
+                if (testCasesCrash(newTestCases))
                 {
                     std::cout << "Found Test suite required for crash, size: " << newTestCases.size() << "\n";
                     break;
@@ -75,18 +76,19 @@ public:
                 midPoint = midPoint / 2;
             }
 
+            // no test case sequence starting with itTestCasesStart was found that does not contribute to the crash
+            // -> proof that *itTestCasesStart must be executed for the crash
             if (midPoint == 0)
             {
                 testCasesReqForCrash.push_back(*itTestCasesStart);
                 itTestCasesStart++;
             }
             else
-            {
+            {   
+                // move itTestCasesStart across the interval of test cases that are not needed for the crash
                 itTestCasesStart = itTestCasesStart + midPoint;
             }
         }
-
-        // tmp.append_range(itBegin, end(testCases));
 
         return testCasesReqForCrash;
     }
@@ -178,15 +180,13 @@ private:
     static std::vector<size_t> createVector(std::vector<size_t> const &startElements, std::vector<size_t>::const_iterator appendStart, std::vector<size_t>::const_iterator appendEnd)
     {
         std::vector<size_t> ret = startElements;
-        for (auto it = appendStart; it < appendEnd; it++)
-        {
-            ret.push_back(*it);
-        }
+        ret.reserve(ret.size() + std::distance(appendStart, appendEnd));
+        ret.insert(std::end(ret), appendStart, appendEnd);
         return ret;
     }
 
     // returns true if the passed test case sequence crashed
-    bool testTestCases(std::vector<size_t> testCases) const
+    bool testCasesCrash(std::vector<size_t> testCases) const
     {
         pid_t childPid = fork();
         if (childPid == 0)
@@ -237,10 +237,8 @@ int main()
     }
     else
     {
-        // FIXME: Error message
-        std::cout << "Could not open test case file.\n";
+        std::cout << "Could not open test case file " << TRACK_FILE_NAME << ".\n";
     }
-
 
     return 0;
 }
