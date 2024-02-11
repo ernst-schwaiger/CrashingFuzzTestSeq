@@ -31,5 +31,11 @@
 *.out
 *.app
 
-# Fuzz Test Cases
+# Fuzz Test Cases, crashfiles
 *.bin
+crash-*
+
+# Executables
+Fuzzer
+TrackTests
+ExtractTests

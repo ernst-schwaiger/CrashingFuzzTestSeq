@@ -226,7 +226,7 @@ private:
 #ifdef EXTRACT_TESTS
 int main()
 {
-    std::fstream f("FuzzTestCases.bin", std::ios_base::binary | std::ios_base::in);
+    std::fstream f(TRACK_FILE_NAME, std::ios_base::binary | std::ios_base::in);
     if (f.good())
     {
         FuzzTestCaseBuffer<4096> ftb(f, LLVMFuzzerTestOneInput);
