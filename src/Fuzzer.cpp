@@ -6,7 +6,7 @@
 
 using namespace std;
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, uint32_t Size)
 {
 #ifdef TRACK_TESTS
     static FuzzTestTracker ftt;

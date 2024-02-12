@@ -1,8 +1,8 @@
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <array>
-#include <span>
 #include <numeric> // iota
 #include <iomanip>
 
@@ -10,8 +10,8 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
-typedef int (*FuzzFuncType)(const uint8_t *Data, size_t Size);
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, uint32_t Size);
+typedef int (*FuzzFuncType)(const uint8_t *Data, uint32_t Size);
 const std::string TRACK_FILE_NAME = "FuzzTestCases.bin";
 
 class FuzzTestTracker
@@ -35,6 +35,23 @@ public:
 
         f.write(reinterpret_cast<char const *>(Data), Size);
     }
+};
+
+class FuzzTestCase
+{
+public:
+    explicit FuzzTestCase() : 
+        pData(nullptr),
+        length(0)
+    {}
+
+    explicit FuzzTestCase(uint8_t const *pData_, size_t length_) : 
+        pData(pData_),
+        length(length_)
+    {}
+
+    uint8_t const *pData;
+    size_t length;
 };
 
 template <size_t MAX_TC_SIZE>
@@ -106,16 +123,16 @@ public:
             if (f.good())
             {
                 auto tc = getTestCaseAt(tcIdx);
-                f.write(reinterpret_cast<char const *>(tc.data()), tc.size_bytes());
+                f.write(reinterpret_cast<char const *>(tc.pData), tc.length);
             }
         }
     }
 
 private:
     
-    std::span<uint8_t const> getTestCaseAt(size_t idx) const
+    FuzzTestCase getTestCaseAt(size_t idx) const
     {
-        std::span<uint8_t const> ret;
+        FuzzTestCase ret;
 
         if (idx < m_testCaseOffsets.size())
         {
@@ -128,7 +145,7 @@ private:
             // FIXME: The other parts of the buffer should be poisoned
             std::copy(&m_memBuf[offset], &m_memBuf[offset + length], pDest);
 
-            ret = std::span<uint8_t const>(pDest, static_cast<size_t>(length));
+            ret = FuzzTestCase(pDest, static_cast<size_t>(length));
         }
 
         return ret;
@@ -202,7 +219,7 @@ private:
             for (size_t tcIdx : testCases)
             {
                 auto tc = getTestCaseAt(tcIdx);
-                m_fuzzFunc(tc.data(), tc.size_bytes());
+                m_fuzzFunc(tc.pData, tc.length);
             }
 
             // we survived, pass zero back to the parent

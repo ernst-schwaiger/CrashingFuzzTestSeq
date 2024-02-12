@@ -1,5 +1,5 @@
 CPP=clang++
-CCOPTS=-O0 -ggdb3 -Wall -std=c++20
+CCOPTS=-O0 -ggdb3 -Wall
 
 
 all: Fuzzer ExtractTests TrackTests
